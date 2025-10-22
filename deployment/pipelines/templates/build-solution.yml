@@ -1,0 +1,61 @@
+parameters:
+
+- name: solution
+  type: string
+  default: '**/*.sln'
+
+- name: buildPlatform
+  type: string
+  default: 'Any CPU'
+
+- name: buildConfiguration
+  type: string
+  default: 'Release'
+
+- name: runSettings
+  type: string
+  default: '$(System.DefaultWorkingDirectory)/src/Piloteer/CodeCoverage.runsettings'
+
+steps:
+- task: NuGetToolInstaller@1
+  displayName: 'NuGet installation'
+
+- task: NuGetCommand@2
+  displayName: 'NuGet restore'
+  inputs:
+    restoreSolution: ${{ parameters.solution }}
+
+- task: VSBuild@1
+  displayName: 'Build solution: ${{ parameters.solution }}'
+  inputs:
+    solution: ${{ parameters.solution }}
+    platform: ${{ parameters.buildPlatform }}
+    configuration: ${{ parameters.buildConfiguration }}
+
+- task: PowerShell@2
+  displayName: 'Display all files'
+  inputs:
+    targetType: 'inline'
+    script: 'Get-ChildItem -Path "$(System.DefaultWorkingDirectory)" -Recurse | ForEach-Object { Write-Host $_.FullName }'
+
+- template: transform-appsettings.yml
+  parameters:
+    buildConfiguration: ${{ parameters.buildConfiguration }}
+    folders:
+      - Piloteer.UnitTests
+      - Piloteer.PowerPlatform.UITests
+      - Piloteer.PowerPlatform.UnitTests
+
+- task: PowerShell@2
+  inputs:
+    filePath: '$(Build.SourcesDirectory)/src/Piloteer/Piloteer.UnitTests/bin/${{ parameters.buildConfiguration }}/net8.0/playwright.ps1'
+    arguments: 'install --with-deps'
+    pwsh: true
+
+- task: VSTest@2
+  displayName: 'Test solution: ${{ parameters.solution }}'
+  inputs:
+    platform:  ${{ parameters.buildPlatform }}
+    configuration: ${{ parameters.buildConfiguration }}
+    codeCoverageEnabled: true
+    runSettingsFile: ${{ parameters.runSettings }}

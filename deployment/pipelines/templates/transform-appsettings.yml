@@ -1,0 +1,14 @@
+parameters:
+- name: buildConfiguration
+  type: string
+
+- name: folders
+  type: object
+
+steps:
+- ${{ each folder in parameters.folders }}:
+  - task: FileTransform@2
+    inputs:
+      folderPath: '$(Build.SourcesDirectory)/**/${{ folder }}/bin/${{ parameters.buildConfiguration }}/net8.0'
+      enableXmlTransform: false
+      jsonTargetFiles: 'appsettings.json'
