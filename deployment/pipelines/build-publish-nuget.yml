@@ -1,62 +1,41 @@
-name: 0.1$(Rev:.r)
+name: 0.1.$(Date:yyMMdd)$(Rev:.r)
 
-pool:
-  vmImage: 'windows-latest'
+parameters:
+- name: buildConfiguration
+  displayName: 'Build Configuration'
+  type: string
+  default: 'Release'
+  values:
+  - 'Release'
+  - 'Debug'
+- name: buildPlatform
+  displayName: 'Build Platform'
+  type: string
+  default: 'Any CPU'
+  values:
+  - 'Any CPU'
+  - 'x64'
+  - 'x86'
 
 trigger:
-  batch: true
-  paths:
-    exclude:
-    - deployment
-        
+   batch: True
+   branches:
+     include:
+     - 'feature/*'
+     - 'main'
+
+pool:
+  vmImage: 'ubuntu-latest'
+
 variables:
-- group: UnitTests_AppSettings
-- name: BuildPlatform
-  value: 'Any CPU'
-- name: BuildConfiguration
-  value: 'NuGetRelease'
-- name: System.Debug
-  value: true
+  solution: '**/*.sln'
 
 steps:
-- task: PowerShell@2
-  displayName: 'Set NuGet Package Version Number'
+- task: NuGetAuthenticate@1
+
+- task: UseDotNet@2
+  displayName: 'Install .NET Core SDK'
   inputs:
-    filePath: 'Deployment/Scripts/SetNuGetPackageVersion.ps1'
-    arguments: '-branch "$(Build.SourceBranch)" -buildNumber "$(Build.BuildNumber)"'
-
-- template: 'templates/build-solution.yml'
-
-# - task: DotNetCoreCLI@2
-#   displayName: 'Pack NuGet'
-#   condition: and(succeeded(), eq(variables.CreateNuGetPackage, 'true'))
-#   inputs:
-#     command: 'pack'
-#     packagesToPack: '$(Build.SourcesDirectory)\Vermaat.Crm.Specflow\Vermaat.Crm.Specflow.csproj;$(Build.SourcesDirectory)\Vermaat.Crm.Specflow.Expressions\Vermaat.Crm.Specflow.Expressions.csproj'
-#     nobuild: true
-#     includesymbols: true
-#     includesource: true
-#     versioningScheme: 'byEnvVar'
-#     versionEnvVar: 'NuGetVersion'
-
-
-# - task: NuGetCommand@2
-#   displayName: 'NuGet push'
-#   condition: and(succeeded(), eq(variables.CreateNuGetPackage, 'true'))
-#   inputs:
-#     command: push
-#     nuGetFeedType: external
-#     publishFeedCredentials: NuGet.org
-
-# - task: CopyFiles@2
-#   displayName: 'Copy Files to: $(build.artifactstagingdirectory)'
-#   inputs:
-#     SourceFolder: '$(system.defaultworkingdirectory)'
-#     Contents: '**\bin\$(BuildConfiguration)\**'
-#     TargetFolder: '$(build.artifactstagingdirectory)'
-
-# - task: PublishBuildArtifacts@1
-#   displayName: 'Publish Artifact'
-#   inputs:
-#     PathtoPublish: '$(build.artifactstagingdirectory)'
-#     ArtifactName: CI
+    packageType: sdk
+    version: '8.0.x'
+    performMultiLevelLookup: true
